@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin – Thoppil Jewellery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a96e; --gold-light: #e8d5a3; --gold-dark: #9a7540;
+      --bg: #0d0b08; --bg-2: #13100c; --bg-3: #1c1710; --bg-4: #221d14;
+      --text: #f0ead8; --text-muted: #9a9080;
+      --border: rgba(201,169,110,0.18);
+      --red: #e05555; --green: #5eb87a;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans: 'Raleway', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: var(--font-sans); background: var(--bg); color: var(--text); font-size: 15px; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--gold-dark); }
+
+    /* ── Login Screen ── */
+    #loginScreen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 60% 40%, rgba(201,169,110,.08), transparent 60%), var(--bg);
+    }
+    .login-box {
+      background: var(--bg-3); border: 1px solid var(--border);
+      padding: 3rem 2.5rem; width: 100%; max-width: 400px;
+      text-align: center;
+    }
+    .login-logo { font-family: var(--font-serif); font-size: 1.8rem; letter-spacing: .2em; color: var(--text); margin-bottom: .3rem; }
+    .login-logo span { color: var(--gold); }
+    .login-sub { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2.5rem; }
+    .login-box h2 { font-family: var(--font-serif); font-size: 1.4rem; font-weight: 300; margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1rem; text-align: left; }
+    .form-group label { display: block; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .5rem; }
+    .form-group input {
+      width: 100%; padding: .8rem 1rem;
+      background: rgba(201,169,110,.05); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-sans); font-size: .9rem; outline: none;
+      transition: border-color .25s;
+    }
+    .form-group input:focus { border-color: var(--gold); }
+    .btn { display: block; width: 100%; padding: .9rem; background: var(--gold); border: none; color: #0d0b08; font-family: var(--font-sans); font-size: .78rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; cursor: pointer; transition: background .25s; margin-top: 1.5rem; }
+    .btn:hover { background: var(--gold-light); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); margin-top: .6rem; }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,169,110,.05); }
+    .error-msg { color: var(--red); font-size: .8rem; margin-top: .8rem; min-height: 1.2em; }
+
+    /* ── Dashboard Shell ── */
+    #dashboard { display: none; height: 100vh; }
+    #dashboard.active { display: flex; }
+
+    .sidebar {
+      width: 240px; min-height: 100vh; flex-shrink: 0;
+      background: var(--bg-2); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .sidebar-brand {
+      padding: 1.8rem 1.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-brand .brand-name { font-family: var(--font-serif); font-size: 1.1rem; letter-spacing: .15em; }
+    .sidebar-brand .brand-name span { color: var(--gold); }
+    .sidebar-brand .brand-role { font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-top: .3rem; }
+
+    .sidebar-nav { flex: 1; padding: 1.2rem 0; }
+    .nav-item {
+      display: flex; align-items: center; gap: .9rem;
+      padding: .85rem 1.5rem;
+      font-size: .8rem; letter-spacing: .05em;
+      color: var(--text-muted); cursor: pointer;
+      transition: background .2s, color .2s;
+      border-left: 2px solid transparent;
+    }
+    .nav-item:hover { background: rgba(201,169,110,.05); color: var(--text); }
+    .nav-item.active { background: rgba(201,169,110,.08); color: var(--gold); border-left-color: var(--gold); }
+    .nav-icon { font-size: 1rem; }
+
+    .sidebar-footer { padding: 1.2rem 1.5rem; border-top: 1px solid var(--border); }
+    .sidebar-user { font-size: .78rem; color: var(--text-muted); margin-bottom: .8rem; }
+    .sidebar-user strong { display: block; color: var(--text); }
+    .btn-logout { width: 100%; padding: .6rem; background: transparent; border: 1px solid rgba(224,85,85,.3); color: var(--red); font-size: .72rem; letter-spacing: .1em; cursor: pointer; transition: background .2s; }
+    .btn-logout:hover { background: rgba(224,85,85,.1); }
+
+    /* ── Main Area ── */
+    .main { flex: 1; overflow-y: auto; background: var(--bg); display: flex; flex-direction: column; }
+
+    .topbar {
+      height: 60px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; background: var(--bg-2); flex-shrink: 0;
+    }
+    .topbar-title { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 400; }
+    .topbar-actions { display: flex; gap: .8rem; }
+
+    .content { padding: 2rem; flex: 1; }
+
+    /* ── Panels ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Stats Row ── */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; margin-bottom: 2rem; }
+    .stat-card { background: var(--bg-3); border: 1px solid var(--border); padding: 1.5rem; }
+    .stat-card .s-label { font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .5rem; }
+    .stat-card .s-val { font-family: var(--font-serif); font-size: 2.2rem; font-weight: 300; color: var(--gold); }
+    .stat-card .s-sub { font-size: .72rem; color: var(--text-muted); margin-top: .3rem; }
+
+    /* ── Section title ── */
+    .section-title { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 400; margin-bottom: 1.5rem; }
+
+    /* ── Category table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    thead tr { background: var(--bg-3); }
+    th { padding: .9rem 1rem; text-align: left; font-size: .65rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: .85rem 1rem; border-bottom: 1px solid rgba(201,169,110,.06); vertical-align: middle; }
+    tr:hover td { background: rgba(201,169,110,.03); }
+    .td-thumb { width: 48px; height: 48px; object-fit: cover; }
+    .td-no-img { width: 48px; height: 48px; background: var(--bg-3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: .8rem; color: var(--text-muted); }
+    .badge { display: inline-block; padding: .2rem .6rem; font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
+    .badge-yes { background: rgba(94,184,122,.15); color: var(--green); }
+    .badge-no  { background: rgba(154,144,128,.1); color: var(--text-muted); }
+    .action-btns { display: flex; gap: .5rem; }
+    .btn-sm { padding: .35rem .75rem; font-size: .7rem; letter-spacing: .06em; border: none; cursor: pointer; transition: background .2s; font-family: var(--font-sans); }
+    .btn-edit { background: rgba(201,169,110,.12); color: var(--gold); }
+    .btn-edit:hover { background: rgba(201,169,110,.22); }
+    .btn-del { background: rgba(224,85,85,.1); color: var(--red); }
+    .btn-del:hover { background: rgba(224,85,85,.2); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+      background: var(--bg-3); border: 1px solid var(--border);
+      padding: 1rem 1.5rem; font-size: .82rem;
+      transform: translateY(20px); opacity: 0;
+      transition: transform .35s, opacity .35s;
+      max-width: 320px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-left: 3px solid var(--green); }
+    #toast.error   { border-left: 3px solid var(--red); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-3); border: 1px solid var(--border);
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid var(--border); }
+    .modal-header h3 { font-family: var(--font-serif); font-size: 1.2rem; font-weight: 400; }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .8rem; justify-content: flex-end; }
+
+    /* ── Form elements (modal) ── */
+    .field { margin-bottom: 1.1rem; }
+    .field label { display: block; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .45rem; }
+    .field input[type="text"],
+    .field input[type="password"],
+    .field textarea {
+      width: 100%; padding: .75rem .9rem;
+      background: rgba(201,169,110,.04); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-sans); font-size: .88rem; outline: none;
+      transition: border-color .25s;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--gold); }
+    .field textarea { resize: vertical; min-height: 80px; }
+    .field-check { display: flex; align-items: center; gap: .7rem; }
+    .field-check input { width: auto; accent-color: var(--gold); }
+    .field-check label { margin-bottom: 0; font-size: .8rem; text-transform: none; letter-spacing: 0; color: var(--text); }
+
+    /* ── Image upload zone ── */
+    .upload-zone {
+      border: 1.5px dashed rgba(201,169,110,.3);
+      padding: 2rem; text-align: center; cursor: pointer;
+      transition: border-color .25s, background .25s;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--gold); background: rgba(201,169,110,.04); }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .upload-icon { font-size: 2rem; color: var(--gold); margin-bottom: .5rem; }
+    .upload-zone p { font-size: .8rem; color: var(--text-muted); }
+    .upload-zone span { font-size: .72rem; color: rgba(201,169,110,.5); }
+    .preview-img { width: 100%; max-height: 180px; object-fit: cover; margin-top: 1rem; display: none; }
+    .current-img-wrap { margin-bottom: .8rem; }
+    .current-img-wrap img { width: 100%; max-height: 140px; object-fit: cover; border: 1px solid var(--border); }
+    .current-img-wrap p { font-size: .72rem; color: var(--text-muted); margin-top: .3rem; }
+
+    /* ── Password change ── */
+    .pw-section { margin-top: 2.5rem; }
+
+    /* ── Responsive sidebar ── */
+    .menu-toggle { display: none; background: none; border: none; color: var(--text); font-size: 1.4rem; cursor: pointer; }
+    @media (max-width: 720px) {
+      .sidebar { position: fixed; left: -240px; top: 0; height: 100%; z-index: 500; transition: left .3s; }
+      .sidebar.open { left: 0; box-shadow: 4px 0 20px rgba(0,0,0,.5); }
+      .menu-toggle { display: block; }
+    }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    .empty-state .e-icon { font-size: 3rem; color: rgba(201,169,110,.2); margin-bottom: 1rem; }
+    .empty-state p { font-size: .9rem; }
+
+    /* ── View site link ── */
+    .view-site { font-size: .75rem; color: var(--gold); text-decoration: none; border: 1px solid rgba(201,169,110,.3); padding: .4rem .9rem; transition: background .2s; }
+    .view-site:hover { background: rgba(201,169,110,.08); }
+
+    /* ── Nav badge ── */
+    .nav-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--green); color: #fff;
+      font-size: .6rem; font-weight: 600;
+      width: 18px; height: 18px; border-radius: 50%;
+      margin-left: auto;
+    }
+
+    /* ── Enquiry cards ── */
+    .enq-card {
+      background: var(--bg-3); border: 1px solid var(--border);
+      margin-bottom: 1px;
+      transition: background .2s;
+    }
+    .enq-card.enq-new { border-left: 3px solid var(--green); }
+    .enq-card.enq-replied { border-left: 3px solid var(--gold); }
+    .enq-card:hover { background: rgba(201,169,110,.03); }
+    .enq-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.2rem; cursor: pointer;
+      gap: 1rem;
+    }
+    .enq-meta { flex: 1; min-width: 0; }
+    .enq-name { font-size: .9rem; font-weight: 500; color: var(--text); }
+    .enq-contact { font-size: .75rem; color: var(--text-muted); margin-top: .2rem; }
+    .enq-right { display: flex; align-items: center; gap: .8rem; flex-shrink: 0; }
+    .enq-time { font-size: .7rem; color: var(--text-muted); white-space: nowrap; }
+    .enq-status {
+      font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+      padding: .22rem .6rem;
+    }
+    .status-new     { background: rgba(94,184,122,.15); color: var(--green); }
+    .status-read    { background: rgba(154,144,128,.1);  color: var(--text-muted); }
+    .status-replied { background: rgba(201,169,110,.15); color: var(--gold); }
+    .enq-body {
+      display: none; padding: 0 1.2rem 1.2rem;
+      border-top: 1px solid rgba(201,169,110,.06);
+    }
+    .enq-body.open { display: block; }
+    .enq-message {
+      font-size: .85rem; color: var(--text-muted); line-height: 1.8;
+      padding: .8rem 0; margin-bottom: .8rem;
+      border-bottom: 1px solid rgba(201,169,110,.06);
+    }
+    .enq-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .6rem; }
+    .enq-empty { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    .enq-empty .e-icon { font-size: 2.5rem; color: rgba(201,169,110,.15); margin-bottom: .8rem; }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ═══════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><span>T</span>HOPPIL</div>
+    <div class="login-sub">Jewellery · Admin Panel</div>
+    <h2>Sign In</h2>
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUser" value="admin" autocomplete="username" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" value="admin123" autocomplete="current-password" required/>
+      </div>
+      <button class="btn" type="submit">Sign In</button>
+      <a href="/" class="btn btn-ghost" style="display:block;text-align:center;text-decoration:none;margin-top:.6rem">← View Website</a>
+    </form>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+<div id="dashboard">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-name"><span>T</span>HOPPIL</div>
+      <div class="brand-role">Admin Dashboard</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-panel="overview">
+        <span class="nav-icon">◈</span> Overview
+      </div>
+      <div class="nav-item" data-panel="categories">
+        <span class="nav-icon">⬡</span> Collections
+      </div>
+      <div class="nav-item" data-panel="enquiries">
+        <span class="nav-icon">✉</span> Enquiries <span class="nav-badge" id="newEnqBadge" style="display:none"></span>
+      </div>
+      <div class="nav-item" data-panel="settings">
+        <span class="nav-icon">✦</span> Settings
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><strong id="adminName">admin</strong>Administrator</div>
+      <button class="btn-logout" id="logoutBtn">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:1rem">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <span class="topbar-title" id="topbarTitle">Overview</span>
+      </div>
+      <div class="topbar-actions">
+        <a href="/" class="view-site" target="_blank">View Site ↗</a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Overview Panel -->
+      <div class="panel active" id="panel-overview">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-card">
+            <div class="s-label">Total Collections</div>
+            <div class="s-val" id="statTotal">—</div>
+            <div class="s-sub">Categories uploaded</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-label">Featured</div>
+            <div class="s-val" id="statFeatured">—</div>
+            <div class="s-sub">Shown on homepage</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-label">With Images</div>
+            <div class="s-val" id="statImages">—</div>
+            <div class="s-sub">Uploaded photos</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-label">Enquiries</div>
+            <div class="s-val" id="statEnquiries">—</div>
+            <div class="s-sub">Total received</div>
+          </div>
+          <div class="stat-card">
+            <div class="s-label">New Enquiries</div>
+            <div class="s-val" id="statNewEnq" style="color:var(--green)">—</div>
+            <div class="s-sub">Unread messages</div>
+          </div>
+        </div>
+        <h3 class="section-title">Recent Collections</h3>
+        <div id="recentCategories"></div>
+      </div>
+
+      <!-- Categories Panel -->
+      <div class="panel" id="panel-categories">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+          <h3 class="section-title" style="margin:0">All Collections</h3>
+          <button class="btn" style="width:auto;padding:.6rem 1.4rem" id="addCatBtn">+ Add Collection</button>
+        </div>
+        <div class="table-wrap">
+          <table id="catTable">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Featured</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="catTableBody"></tbody>
+          </table>
+          <div class="empty-state" id="catEmpty" style="display:none">
+            <div class="e-icon">⬡</div>
+            <p>No collections yet. Click "+ Add Collection" to get started.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enquiries Panel -->
+      <div class="panel" id="panel-enquiries">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+          <h3 class="section-title" style="margin:0">Customer Enquiries</h3>
+          <div style="display:flex;gap:.8rem;align-items:center">
+            <select id="enqFilter" style="background:var(--bg-3);border:1px solid var(--border);color:var(--text);padding:.45rem .8rem;font-family:var(--font-sans);font-size:.78rem;outline:none;cursor:pointer">
+              <option value="all">All Enquiries</option>
+              <option value="new">New</option>
+              <option value="read">Read</option>
+              <option value="replied">Replied</option>
+            </select>
+            <button class="btn" style="width:auto;padding:.5rem 1rem;font-size:.72rem" id="markAllReadBtn">Mark All Read</button>
+          </div>
+        </div>
+        <div id="enquiriesWrap"></div>
+      </div>
+
+      <!-- Settings Panel -->
+      <div class="panel" id="panel-settings">
+        <h3 class="section-title">Settings</h3>
+        <div style="max-width:480px">
+          <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem">Manage your admin account settings.</p>
+          <div class="pw-section">
+            <h4 style="font-family:var(--font-serif);font-size:1.1rem;font-weight:400;margin-bottom:1.2rem">Change Password</h4>
+            <form id="pwForm">
+              <div class="field">
+                <label>Current Password</label>
+                <input type="password" id="pwCurrent" required/>
+              </div>
+              <div class="field">
+                <label>New Password</label>
+                <input type="password" id="pwNew" required minlength="6"/>
+              </div>
+              <div class="field">
+                <label>Confirm New Password</label>
+                <input type="password" id="pwConfirm" required/>
+              </div>
+              <button class="btn" type="submit" style="width:auto;padding:.7rem 1.6rem">Update Password</button>
+              <div class="error-msg" id="pwMsg" style="margin-top:.5rem"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<!-- ══ ADD/EDIT MODAL ═════════════════════════════════════════ -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Add Collection</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="catForm" enctype="multipart/form-data">
+        <input type="hidden" id="editId"/>
+        <div class="field">
+          <label>Collection Name *</label>
+          <input type="text" id="catName" placeholder="e.g. Necklaces, Rings…" required/>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="catDesc" placeholder="Brief description of this collection…"></textarea>
+        </div>
+        <div class="field">
+          <label>Collection Image</label>
+          <div class="current-img-wrap" id="currentImgWrap" style="display:none">
+            <img id="currentImg" src="" alt="Current image"/>
+            <p>Current image (upload new to replace)</p>
+          </div>
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="catImage" accept="image/*"/>
+            <div class="upload-icon">◈</div>
+            <p>Drag & drop or click to upload</p>
+            <span>JPG, PNG, WEBP — Max 5MB</span>
+            <img class="preview-img" id="previewImg" src="" alt="Preview"/>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-check">
+            <input type="checkbox" id="catFeatured" checked/>
+            <label for="catFeatured">Show as Featured on homepage</label>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);width:auto;padding:.6rem 1.2rem" id="modalCancel">Cancel</button>
+      <button class="btn" style="width:auto;padding:.6rem 1.4rem" id="modalSave">Save Collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIRM DELETE ═════════════════════════════════════════ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Delete Collection</h3>
+      <button class="modal-close" id="confirmClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:.9rem;line-height:1.7">Are you sure you want to delete <strong id="delName"></strong>? This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);width:auto;padding:.6rem 1.2rem" id="confirmNo">Cancel</button>
+      <button class="btn" style="background:var(--red);width:auto;padding:.6rem 1.2rem" id="confirmYes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOAST ═════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<script src="/admin/admin.js"></script>
+</body>
+</html>
