@@ -9,6 +9,15 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["jewellery", "kerala", "gold", "website"],
-  "license": "MIT"
+  "keywords": [
+    "jewellery",
+    "kerala",
+    "gold",
+    "website"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.3"
+  }
 }

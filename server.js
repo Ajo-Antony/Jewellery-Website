@@ -1,40 +1,62 @@
 /**
  * THOPPIL JEWELLERY — Supabase Edition
  * Zero npm dependencies — uses Node.js 18+ built-in fetch
- * Database: Supabase (PostgreSQL)
- * Storage:  Supabase Storage (for images)
  */
 
 const http   = require('http');
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
-const url    = require('url');
 
-const PORT         = process.env.PORT || 3000;
-const JWT_KEY      = process.env.JWT_SECRET || 'thoppil-jewellery-secret-2024';
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || ''; // service_role key
-const BUCKET       = 'jewellery-images';
+// ── Load .env (handles Windows CRLF) ──────────────────────────
+(function loadEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  fs.readFileSync(envPath, 'utf8')
+    .replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    .split('\n')
+    .forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) return;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) return;
+      const key = trimmed.slice(0, eq).trim();
+      const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+      if (key && !(key in process.env)) process.env[key] = val;
+    });
+  console.log('📄 .env loaded');
+})();
+
+// ── Config (read after .env loads) ────────────────────────────
+const PORT   = process.env.PORT   || 3000;
+const BUCKET = 'jewellery-images';
 
 const MIME = {
-  '.html':'text/html','.css':'text/css','.js':'application/javascript',
-  '.json':'application/json','.png':'image/png','.jpg':'image/jpeg',
-  '.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif',
-  '.svg':'image/svg+xml','.ico':'image/x-icon','.woff2':'font/woff2'
+  '.html':'text/html', '.css':'text/css', '.js':'application/javascript',
+  '.json':'application/json', '.png':'image/png', '.jpg':'image/jpeg',
+  '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif',
+  '.svg':'image/svg+xml', '.ico':'image/x-icon', '.woff2':'font/woff2'
 };
 
-// ── Supabase REST helper ───────────────────────────────────────
-async function sb(method, path, body, extraHeaders = {}) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY in environment variables.');
-  const res = await fetch(`${SUPABASE_URL}${path}`, {
+// ── Supabase helpers ───────────────────────────────────────────
+function sbUrl() { return process.env.SUPABASE_URL || ''; }
+function sbKey() { return process.env.SUPABASE_SERVICE_KEY || ''; }
+
+function checkSB() {
+  if (!sbUrl() || !sbKey())
+    throw new Error('Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY in your .env file.');
+}
+
+async function sb(method, sbPath, body, extra = {}) {
+  checkSB();
+  const res = await fetch(`${sbUrl()}${sbPath}`, {
     method,
     headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'apikey': sbKey(),
+      'Authorization': `Bearer ${sbKey()}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
-      ...extraHeaders
+      ...extra
     },
     body: body ? JSON.stringify(body) : undefined
   });
@@ -43,30 +65,29 @@ async function sb(method, path, body, extraHeaders = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// Upload file to Supabase Storage
 async function sbUpload(filename, buffer, mimetype) {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filename}`, {
+  checkSB();
+  const res = await fetch(`${sbUrl()}/storage/v1/object/${BUCKET}/${filename}`, {
     method: 'POST',
     headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'apikey': sbKey(),
+      'Authorization': `Bearer ${sbKey()}`,
       'Content-Type': mimetype,
       'x-upsert': 'true'
     },
     body: buffer
   });
   if (!res.ok) throw new Error(await res.text());
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${filename}`;
+  return `${sbUrl()}/storage/v1/object/public/${BUCKET}/${filename}`;
 }
 
-// Delete file from Supabase Storage
 async function sbDeleteFile(fileUrl) {
-  if (!fileUrl) return;
+  if (!fileUrl || !sbUrl() || !sbKey()) return;
   const filename = fileUrl.split(`/${BUCKET}/`)[1];
   if (!filename) return;
-  await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filename}`, {
+  await fetch(`${sbUrl()}/storage/v1/object/${BUCKET}/${filename}`, {
     method: 'DELETE',
-    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    headers: { 'apikey': sbKey(), 'Authorization': `Bearer ${sbKey()}` }
   }).catch(() => {});
 }
 
@@ -80,27 +101,24 @@ function verifyPassword(pw, stored) {
   return crypto.scryptSync(pw, salt, 64).toString('hex') === hash;
 }
 function b64u(buf) { return Buffer.from(buf).toString('base64url'); }
+function jwtKey()  { return process.env.JWT_SECRET || 'thoppil-jewellery-secret-2024'; }
 function signJWT(payload) {
   const h = b64u(JSON.stringify({alg:'HS256',typ:'JWT'}));
   const b = b64u(JSON.stringify({...payload, exp: Math.floor(Date.now()/1000)+86400}));
-  const s = b64u(crypto.createHmac('sha256', JWT_KEY).update(`${h}.${b}`).digest());
+  const s = b64u(crypto.createHmac('sha256', jwtKey()).update(`${h}.${b}`).digest());
   return `${h}.${b}.${s}`;
 }
 function verifyJWT(token) {
   try {
     const [h,b,s] = token.split('.');
-    const exp = b64u(crypto.createHmac('sha256', JWT_KEY).update(`${h}.${b}`).digest());
+    const exp = b64u(crypto.createHmac('sha256', jwtKey()).update(`${h}.${b}`).digest());
     if (s !== exp) return null;
     const p = JSON.parse(Buffer.from(b,'base64url').toString());
     return p.exp < Math.floor(Date.now()/1000) ? null : p;
   } catch { return null; }
 }
 
-// ── Admin credentials (env or default) ────────────────────────
-const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
-
-// ── Helpers ────────────────────────────────────────────────────
+// ── Request helpers ────────────────────────────────────────────
 function requireAuth(req) {
   const auth = req.headers['authorization'];
   if (!auth?.startsWith('Bearer ')) return null;
@@ -120,11 +138,11 @@ function serveFile(res, filePath) {
   fs.createReadStream(filePath).pipe(res);
 }
 function readBody(req) {
-  return new Promise((res,rej) => {
+  return new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', c => chunks.push(c));
-    req.on('end', () => res(Buffer.concat(chunks)));
-    req.on('error', rej);
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
   });
 }
 function parseMultipart(buffer, boundary) {
@@ -147,73 +165,81 @@ function parseMultipart(buffer, boundary) {
     const fm = hs.match(/filename="([^"]*)"/);
     const cm = hs.match(/Content-Type:\s*(\S+)/i);
     if (dm) {
-      if (fm && fm[1]) file = { fieldname:dm[1], filename:fm[1], mimetype:cm?cm[1]:'application/octet-stream', buffer:data };
+      if (fm && fm[1]) file = { filename:fm[1], mimetype:cm?cm[1]:'application/octet-stream', buffer:data };
       else fields[dm[1]] = data.toString();
     }
     pos = ns !== -1 ? ns : buffer.length;
   }
   return { fields, file };
 }
+function parsePath(reqUrl) {
+  try { return new URL(reqUrl, 'http://localhost').pathname.replace(/\/$/, '') || '/'; }
+  catch { return reqUrl.split('?')[0].replace(/\/$/, '') || '/'; }
+}
 
 // ── HTTP Server ────────────────────────────────────────────────
 http.createServer(async (req, res) => {
-  const parsed  = url.parse(req.url, true);
-  const pname   = parsed.pathname.replace(/\/$/, '') || '/';
-  const method  = req.method.toUpperCase();
+  const pname  = parsePath(req.url);
+  const method = req.method.toUpperCase();
 
   if (method === 'OPTIONS') {
-    res.writeHead(204,{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,PUT,DELETE,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type'});
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Authorization,Content-Type'
+    });
     return res.end();
   }
 
   try {
-    // ── PUBLIC: categories ──────────────────────────────────────
+
+    // PUBLIC: get categories
     if (pname === '/api/categories' && method === 'GET') {
       const data = await sb('GET', '/rest/v1/categories?select=*&order=created_at.asc');
       return sendJSON(res, 200, data || []);
     }
 
-    // ── PUBLIC: submit enquiry ──────────────────────────────────
+    // PUBLIC: submit enquiry
     if (pname === '/api/enquiry' && method === 'POST') {
       const {name, phone, email, message} = JSON.parse((await readBody(req)).toString());
       if (!name || !phone) return sendJSON(res, 400, {error:'Name and phone required'});
-      const data = await sb('POST', '/rest/v1/enquiries', {name, phone, email:email||'', message:message||'', status:'new'});
-      return sendJSON(res, 200, {success:true, enquiry: data?.[0]});
+      const data = await sb('POST', '/rest/v1/enquiries', {
+        name, phone, email:email||'', message:message||'', status:'new'
+      });
+      return sendJSON(res, 200, {success:true, enquiry:data?.[0]});
     }
 
-    // ── ADMIN: login ────────────────────────────────────────────
+    // ADMIN: login
     if (pname === '/api/admin/login' && method === 'POST') {
       const {username, password} = JSON.parse((await readBody(req)).toString());
-      const storedPass = process.env.ADMIN_PASSWORD_HASH || hashPassword(ADMIN_PASS);
-      // Support both plain-text env and hashed env
-      let valid = false;
-      if (process.env.ADMIN_PASSWORD_HASH) {
-        valid = username === ADMIN_USER && verifyPassword(password, process.env.ADMIN_PASSWORD_HASH);
-      } else {
-        valid = username === ADMIN_USER && password === ADMIN_PASS;
-      }
+      const adminUser = process.env.ADMIN_USERNAME || 'admin';
+      const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+      const adminHash = process.env.ADMIN_PASSWORD_HASH || '';
+      const valid = adminHash
+        ? username === adminUser && verifyPassword(password, adminHash)
+        : username === adminUser && password === adminPass;
       if (!valid) return sendJSON(res, 401, {error:'Invalid credentials'});
-      return sendJSON(res, 200, {success:true, token: signJWT({username, role:'admin'})});
+      return sendJSON(res, 200, {success:true, token:signJWT({username, role:'admin'})});
     }
 
-    // ── ADMIN: verify ───────────────────────────────────────────
+    // ADMIN: verify token
     if (pname === '/api/admin/verify' && method === 'GET') {
       const admin = requireAuth(req);
       return admin ? sendJSON(res,200,{valid:true,admin}) : sendJSON(res,401,{error:'Unauthorized'});
     }
 
-    // ── ADMIN: logout ───────────────────────────────────────────
+    // ADMIN: logout
     if (pname === '/api/admin/logout' && method === 'POST')
       return sendJSON(res, 200, {success:true});
 
-    // ── ADMIN: list categories ──────────────────────────────────
+    // ADMIN: list categories
     if (pname === '/api/admin/categories' && method === 'GET') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
       const data = await sb('GET', '/rest/v1/categories?select=*&order=created_at.asc');
       return sendJSON(res, 200, data || []);
     }
 
-    // ── ADMIN: add category ─────────────────────────────────────
+    // ADMIN: add category
     if (pname === '/api/admin/categories' && method === 'POST') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
       const ct = req.headers['content-type']||'';
@@ -230,17 +256,15 @@ http.createServer(async (req, res) => {
       let image_url = null;
       if (fileData && fileData.buffer.length > 0) {
         const ext = path.extname(fileData.filename)||'.jpg';
-        const fname = `cat-${Date.now()}${ext}`;
-        image_url = await sbUpload(fname, fileData.buffer, fileData.mimetype);
+        image_url = await sbUpload(`cat-${Date.now()}${ext}`, fileData.buffer, fileData.mimetype);
       }
       const data = await sb('POST', '/rest/v1/categories', {
-        name, description:description||'',
-        image_url, featured: featured==='true'
+        name, description:description||'', image_url, featured:featured==='true'
       });
       return sendJSON(res,200,{success:true,category:data?.[0]});
     }
 
-    // ── ADMIN: update category ──────────────────────────────────
+    // ADMIN: update category
     const catM = pname.match(/^\/api\/admin\/categories\/(\d+)$/);
     if (catM && method === 'PUT') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
@@ -255,27 +279,23 @@ http.createServer(async (req, res) => {
       } else {
         ({name,description,featured} = JSON.parse(body.toString()));
       }
-      // Get existing record
       const existing = await sb('GET', `/rest/v1/categories?id=eq.${id}&select=*`);
       if (!existing?.length) return sendJSON(res,404,{error:'Not found'});
       let image_url = existing[0].image_url;
       if (fileData && fileData.buffer.length > 0) {
         await sbDeleteFile(image_url);
         const ext = path.extname(fileData.filename)||'.jpg';
-        const fname = `cat-${Date.now()}${ext}`;
-        image_url = await sbUpload(fname, fileData.buffer, fileData.mimetype);
+        image_url = await sbUpload(`cat-${Date.now()}${ext}`, fileData.buffer, fileData.mimetype);
       }
-      const updates = {};
-      if (name)        updates.name = name;
+      const updates = { image_url, updated_at: new Date().toISOString() };
+      if (name) updates.name = name;
       if (description !== undefined) updates.description = description;
-      if (featured !== undefined) updates.featured = featured === 'true';
-      updates.image_url = image_url;
-      updates.updated_at = new Date().toISOString();
+      if (featured !== undefined) updates.featured = featured==='true';
       const data = await sb('PATCH', `/rest/v1/categories?id=eq.${id}`, updates);
       return sendJSON(res,200,{success:true,category:data?.[0]});
     }
 
-    // ── ADMIN: delete category ──────────────────────────────────
+    // ADMIN: delete category
     if (catM && method === 'DELETE') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
       const id = catM[1];
@@ -285,50 +305,43 @@ http.createServer(async (req, res) => {
       return sendJSON(res,200,{success:true});
     }
 
-    // ── ADMIN: list enquiries ───────────────────────────────────
+    // ADMIN: list enquiries
     if (pname === '/api/admin/enquiries' && method === 'GET') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
       const data = await sb('GET', '/rest/v1/enquiries?select=*&order=created_at.desc');
       return sendJSON(res, 200, data || []);
     }
 
-    // ── ADMIN: update enquiry status ────────────────────────────
+    // ADMIN: update enquiry status
     const enqM = pname.match(/^\/api\/admin\/enquiries\/(\d+)$/);
     if (enqM && method === 'PUT') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
-      const id = enqM[1];
       const {status} = JSON.parse((await readBody(req)).toString());
-      await sb('PATCH', `/rest/v1/enquiries?id=eq.${id}`, {status});
+      await sb('PATCH', `/rest/v1/enquiries?id=eq.${enqM[1]}`, {status});
       return sendJSON(res,200,{success:true});
     }
 
-    // ── ADMIN: delete enquiry ───────────────────────────────────
+    // ADMIN: delete enquiry
     if (enqM && method === 'DELETE') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
-      const id = enqM[1];
-      await sb('DELETE', `/rest/v1/enquiries?id=eq.${id}`);
+      await sb('DELETE', `/rest/v1/enquiries?id=eq.${enqM[1]}`);
       return sendJSON(res,200,{success:true});
     }
 
-    // ── ADMIN: change password ──────────────────────────────────
+    // ADMIN: change password
     if (pname === '/api/admin/password' && method === 'PUT') {
       if (!requireAuth(req)) return sendJSON(res,401,{error:'Unauthorized'});
       const {currentPassword, newPassword} = JSON.parse((await readBody(req)).toString());
       const storedHash = process.env.ADMIN_PASSWORD_HASH;
-      if (storedHash) {
-        if (!verifyPassword(currentPassword, storedHash))
-          return sendJSON(res,400,{error:'Current password incorrect'});
-      } else {
-        if (currentPassword !== ADMIN_PASS)
-          return sendJSON(res,400,{error:'Current password incorrect'});
-      }
+      const adminPass  = process.env.ADMIN_PASSWORD || 'admin123';
+      const ok = storedHash ? verifyPassword(currentPassword, storedHash) : currentPassword === adminPass;
+      if (!ok) return sendJSON(res,400,{error:'Current password incorrect'});
       const newHash = hashPassword(newPassword);
-      console.log('\n🔑 New password hash (save this as ADMIN_PASSWORD_HASH env var):');
-      console.log(newHash + '\n');
-      return sendJSON(res,200,{success:true, note:'Save the hash printed in server logs as ADMIN_PASSWORD_HASH env var'});
+      console.log('\n🔑 ADMIN_PASSWORD_HASH=' + newHash + '\n');
+      return sendJSON(res,200,{success:true,message:'Add the hash printed in console to your env as ADMIN_PASSWORD_HASH'});
     }
 
-    // ── STATIC FILES ────────────────────────────────────────────
+    // ── Static files ───────────────────────────────────────────
     if (pname === '/admin' || pname.startsWith('/admin/')) {
       const ap = pname === '/admin' ? '/admin/index.html' : pname;
       const fp = path.join(__dirname, ap);
@@ -344,13 +357,13 @@ http.createServer(async (req, res) => {
 
   } catch(err) {
     console.error('Error:', err.message);
-    sendJSON(res, 500, {error: err.message.includes('Supabase not configured') ? err.message : 'Server error'});
+    sendJSON(res, 500, {error: err.message});
   }
 
 }).listen(PORT, () => {
   console.log(`\n✨ Thoppil Jewellery (Supabase Edition)`);
   console.log(`🌐 http://localhost:${PORT}`);
   console.log(`🔐 Admin: http://localhost:${PORT}/admin`);
-  if (!SUPABASE_URL) console.warn('\n⚠️  SUPABASE_URL not set! Add environment variables.\n');
-  else console.log(`✅ Supabase: ${SUPABASE_URL}\n`);
+  if (!sbUrl()) console.warn('⚠️  SUPABASE_URL not set! Add it to your .env file.\n');
+  else console.log(`✅ Supabase: ${sbUrl()}\n`);
 });
