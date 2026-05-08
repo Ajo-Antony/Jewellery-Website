@@ -1,92 +1,49 @@
 -- ═══════════════════════════════════════════════════════════
--- THOPPIL JEWELLERY — Supabase Database Schema
--- Run this entire SQL in: Supabase Dashboard → SQL Editor → New Query
+-- THOPPIL JEWELLERY — Extended Schema (Products)
+-- Run in: Supabase Dashboard → SQL Editor → New Query
 -- ═══════════════════════════════════════════════════════════
 
--- ── 1. Categories table ──────────────────────────────────────
-CREATE TABLE IF NOT EXISTS categories (
-  id          BIGSERIAL PRIMARY KEY,
-  name        TEXT NOT NULL,
-  description TEXT DEFAULT '',
-  image_url   TEXT,
-  featured    BOOLEAN DEFAULT true,
-  created_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ DEFAULT NOW()
+-- ── Add slug column to categories ────────────────────────────
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS slug TEXT;
+UPDATE categories
+  SET slug = LOWER(REGEXP_REPLACE(REPLACE(REPLACE(name, '&', 'and'), ' ', '-'), '[^a-z0-9-]', '', 'g'))
+  WHERE slug IS NULL OR slug = '';
+
+-- ── Products table ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS products (
+  id           BIGSERIAL PRIMARY KEY,
+  category_id  BIGINT REFERENCES categories(id) ON DELETE SET NULL,
+  name         TEXT NOT NULL,
+  slug         TEXT UNIQUE NOT NULL,
+  description  TEXT DEFAULT '',
+  price_range  TEXT DEFAULT '',
+  gold_purity  TEXT DEFAULT '22K',
+  weight       TEXT DEFAULT '',
+  stone_type   TEXT DEFAULT '',
+  thumbnail    TEXT,
+  featured     BOOLEAN DEFAULT false,
+  stock_status TEXT DEFAULT 'available',
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── 2. Enquiries table ───────────────────────────────────────
-CREATE TABLE IF NOT EXISTS enquiries (
-  id         BIGSERIAL PRIMARY KEY,
-  name       TEXT NOT NULL,
-  phone      TEXT NOT NULL,
-  email      TEXT DEFAULT '',
-  message    TEXT DEFAULT '',
-  status     TEXT DEFAULT 'new' CHECK (status IN ('new','read','replied')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- ── Product images table ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS product_images (
+  id            BIGSERIAL PRIMARY KEY,
+  product_id    BIGINT REFERENCES products(id) ON DELETE CASCADE,
+  image_url     TEXT NOT NULL,
+  display_order INT DEFAULT 0,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── 3. Seed default categories ───────────────────────────────
-INSERT INTO categories (name, description, featured) VALUES
-  ('Necklaces',           'Elegant necklaces for every occasion',     true),
-  ('Rings',               'Exquisite rings crafted with precision',    true),
-  ('Earrings',            'Beautiful earrings from classic to modern', true),
-  ('Bangles & Bracelets', 'Traditional and contemporary bangles',      false),
-  ('Bridal Sets',         'Complete bridal jewellery collections',     true),
-  ('Temple Jewellery',    'Traditional Kerala temple jewellery',       true)
-ON CONFLICT DO NOTHING;
+-- ── Disable RLS on all tables ─────────────────────────────────
+ALTER TABLE products       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE product_images DISABLE ROW LEVEL SECURITY;
+ALTER TABLE categories     DISABLE ROW LEVEL SECURITY;
+ALTER TABLE enquiries      DISABLE ROW LEVEL SECURITY;
 
--- ── 4. Disable Row Level Security (use service_role key) ─────
--- We use service_role key in backend so RLS is bypassed.
--- But enable it for safety and allow all via policy:
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE enquiries  ENABLE ROW LEVEL SECURITY;
-
--- Allow public read on categories
-CREATE POLICY "Public read categories"
-  ON categories FOR SELECT
-  USING (true);
-
--- Allow service_role full access (your backend uses this)
-CREATE POLICY "Service full access categories"
-  ON categories FOR ALL
-  USING (auth.role() = 'service_role');
-
--- Allow public insert on enquiries (contact form)
-CREATE POLICY "Public insert enquiries"
-  ON enquiries FOR INSERT
-  WITH CHECK (true);
-
--- Allow service_role full access to enquiries
-CREATE POLICY "Service full access enquiries"
-  ON enquiries FOR ALL
-  USING (auth.role() = 'service_role');
-
--- ── 5. Storage bucket ────────────────────────────────────────
--- Run this separately in Supabase Dashboard → Storage → New Bucket
--- Bucket name: jewellery-images
--- Public bucket: YES (tick the box)
---
--- OR run this SQL:
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('jewellery-images', 'jewellery-images', true)
-ON CONFLICT DO NOTHING;
-
--- Allow public read on storage
-CREATE POLICY "Public read images"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'jewellery-images');
-
--- Allow service_role to upload/delete
-CREATE POLICY "Service upload images"
-  ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'jewellery-images');
-
-CREATE POLICY "Service delete images"
-  ON storage.objects FOR DELETE
-  USING (bucket_id = 'jewellery-images');
-
--- ── Done! ─────────────────────────────────────────────────────
--- You should see:
---   ✅ Table: categories (with 6 rows)
---   ✅ Table: enquiries
---   ✅ Storage bucket: jewellery-images
+-- ── Indexes ───────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_products_category   ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_products_slug       ON products(slug);
+CREATE INDEX IF NOT EXISTS idx_products_featured   ON products(featured);
+CREATE INDEX IF NOT EXISTS idx_product_images_prod ON product_images(product_id, display_order);

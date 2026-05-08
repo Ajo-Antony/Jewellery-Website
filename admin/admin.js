@@ -528,3 +528,254 @@ function timeAgo(iso) {
 
 // ── Init ───────────────────────────────────────────────────────
 checkAuth();
+
+// ══════════════════════════════════════════════════════════════
+// PRODUCTS MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+let allProducts = [];
+let allCategoriesForSelect = [];
+
+// ── Load Products ──────────────────────────────────────────────
+async function loadProducts() {
+  try {
+    allProducts = await api('/api/admin/products');
+    renderProductsTable();
+    updateProductStats();
+  } catch (err) {
+    toast('Failed to load products: ' + err.message, 'error');
+  }
+}
+
+function updateProductStats() {
+  const el = document.getElementById('statProducts');
+  if (el) el.textContent = allProducts.length;
+}
+
+function renderProductsTable() {
+  const tbody = document.getElementById('prodTableBody');
+  const empty = document.getElementById('prodEmpty');
+  if (!tbody) return;
+
+  if (!allProducts.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = allProducts.map(p => {
+    const imgs = p.product_images || [];
+    const thumb = p.thumbnail || imgs[0]?.image_url || null;
+    const catName = p.categories?.name || '—';
+    const statusClass = { available:'badge-yes', made_to_order:'badge-no', out_of_stock:'badge-no' }[p.stock_status] || 'badge-no';
+    const statusLabel = { available:'Available', made_to_order:'MTO', out_of_stock:'OOS' }[p.stock_status] || p.stock_status;
+    return `
+      <tr>
+        <td>${thumb ? `<img class="td-thumb" src="${thumb}" alt="${escHTML(p.name)}"/>` : `<div class="td-no-img">◈</div>`}</td>
+        <td><strong>${escHTML(p.name)}</strong><br><span style="font-size:.72rem;color:var(--text-muted)">${escHTML(p.slug||'')}</span></td>
+        <td style="color:var(--text-muted);font-size:.82rem">${escHTML(catName)}</td>
+        <td style="color:var(--gold);font-size:.78rem">${escHTML(p.gold_purity||'—')}</td>
+        <td style="color:var(--text-muted);font-size:.78rem">${escHTML(p.price_range||'—')}</td>
+        <td><span class="badge ${p.featured?'badge-yes':'badge-no'}">${p.featured?'Yes':'No'}</span></td>
+        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="btn-sm btn-edit" onclick="openEditProduct(${p.id})">Edit</button>
+            <button class="btn-sm btn-del"  onclick="deleteProduct(${p.id},'${escHTML(p.name)}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+// ── Load Categories for Select ─────────────────────────────────
+async function loadCategoriesForSelect() {
+  try {
+    allCategoriesForSelect = await api('/api/admin/categories');
+    const sel = document.getElementById('prodCategory');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select category…</option>' +
+      allCategoriesForSelect.map(c => `<option value="${c.id}">${escHTML(c.name)}</option>`).join('');
+  } catch {}
+}
+
+// ── Open Add/Edit Modal ────────────────────────────────────────
+document.getElementById('addProdBtn')?.addEventListener('click', () => openAddProduct());
+document.getElementById('prodModalClose')?.addEventListener('click', closeProdModal);
+document.getElementById('prodModalCancel')?.addEventListener('click', closeProdModal);
+document.getElementById('prodModal')?.addEventListener('click', e => { if (e.target === e.currentTarget) closeProdModal(); });
+
+async function openAddProduct() {
+  await loadCategoriesForSelect();
+  document.getElementById('prodEditId').value = '';
+  document.getElementById('prodModalTitle').textContent = 'Add Product';
+  document.getElementById('prodForm').reset();
+  document.getElementById('prodImgPreviews').innerHTML = '';
+  document.getElementById('prodExistingImgs').innerHTML = '';
+  document.getElementById('prodModal').classList.add('open');
+}
+
+async function openEditProduct(id) {
+  await loadCategoriesForSelect();
+  const p = allProducts.find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('prodEditId').value = p.id;
+  document.getElementById('prodModalTitle').textContent = 'Edit Product';
+  document.getElementById('prodName').value = p.name;
+  document.getElementById('prodPurity').value = p.gold_purity || '22K';
+  document.getElementById('prodWeight').value = p.weight || '';
+  document.getElementById('prodStone').value = p.stone_type || '';
+  document.getElementById('prodPrice').value = p.price_range || '';
+  document.getElementById('prodStock').value = p.stock_status || 'available';
+  document.getElementById('prodDesc').value = p.description || '';
+  document.getElementById('prodFeatured').checked = p.featured;
+  document.getElementById('prodImages').value = '';
+  document.getElementById('prodImgPreviews').innerHTML = '';
+
+  // Set category
+  const sel = document.getElementById('prodCategory');
+  if (p.category_id) sel.value = p.category_id;
+
+  // Show existing images
+  const imgs = p.product_images || [];
+  const allImgs = [
+    ...(p.thumbnail ? [{ id: null, image_url: p.thumbnail, is_thumb: true }] : []),
+    ...imgs.sort((a,b) => a.display_order - b.display_order)
+  ];
+  const existingEl = document.getElementById('prodExistingImgs');
+  if (allImgs.length) {
+    existingEl.innerHTML = `
+      <p style="font-size:.72rem;color:var(--text-muted);margin-bottom:.5rem;letter-spacing:.08em">EXISTING IMAGES</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem">
+        ${allImgs.map(img => `
+          <div style="position:relative">
+            <img src="${img.image_url}" style="width:72px;height:72px;object-fit:cover;border:1px solid var(--border)"/>
+            ${img.is_thumb ? '<span style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.5rem;background:rgba(201,169,110,.8);color:#000;padding:.1rem">THUMB</span>' : ''}
+            ${img.id ? `<button onclick="deleteProductImage(${img.id}, this.parentElement)" style="position:absolute;top:0;right:0;width:18px;height:18px;background:rgba(224,85,85,.8);border:none;color:white;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center">✕</button>` : ''}
+          </div>`).join('')}
+      </div>`;
+  }
+
+  document.getElementById('prodModal').classList.add('open');
+
+  // Navigate to products panel
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-panel="products"]').classList.add('active');
+  document.getElementById('panel-products').classList.add('active');
+  document.getElementById('topbarTitle').textContent = 'Products';
+}
+
+function closeProdModal() {
+  document.getElementById('prodModal').classList.remove('open');
+}
+
+// ── Image preview on select ────────────────────────────────────
+document.getElementById('prodImages')?.addEventListener('change', function() {
+  const previews = document.getElementById('prodImgPreviews');
+  previews.innerHTML = '';
+  Array.from(this.files).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;display:inline-block';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:72px;height:72px;object-fit:cover;border:1px solid var(--border)';
+      if (i === 0) {
+        const label = document.createElement('span');
+        label.textContent = 'THUMB';
+        label.style.cssText = 'position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.5rem;background:rgba(201,169,110,.8);color:#000;padding:.1rem';
+        wrap.appendChild(label);
+      }
+      wrap.appendChild(img);
+      previews.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// Drag & drop on product upload zone
+const prodUploadZone = document.getElementById('prodUploadZone');
+prodUploadZone?.addEventListener('dragover', e => { e.preventDefault(); prodUploadZone.classList.add('drag'); });
+prodUploadZone?.addEventListener('dragleave', () => prodUploadZone.classList.remove('drag'));
+prodUploadZone?.addEventListener('drop', e => {
+  e.preventDefault(); prodUploadZone.classList.remove('drag');
+  const dt = new DataTransfer();
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(f => dt.items.add(f));
+  document.getElementById('prodImages').files = dt.files;
+  document.getElementById('prodImages').dispatchEvent(new Event('change'));
+});
+
+// ── Save Product ───────────────────────────────────────────────
+document.getElementById('prodModalSave')?.addEventListener('click', async () => {
+  const id = document.getElementById('prodEditId').value;
+  const name = document.getElementById('prodName').value.trim();
+  if (!name) { toast('Product name is required', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('description', document.getElementById('prodDesc').value.trim());
+  fd.append('gold_purity', document.getElementById('prodPurity').value);
+  fd.append('weight', document.getElementById('prodWeight').value.trim());
+  fd.append('stone_type', document.getElementById('prodStone').value.trim());
+  fd.append('price_range', document.getElementById('prodPrice').value.trim());
+  fd.append('stock_status', document.getElementById('prodStock').value);
+  fd.append('featured', document.getElementById('prodFeatured').checked);
+  fd.append('category_id', document.getElementById('prodCategory').value);
+
+  const files = document.getElementById('prodImages').files;
+  Array.from(files).forEach(f => fd.append('image', f));
+
+  const saveBtn = document.getElementById('prodModalSave');
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+
+  try {
+    if (id) {
+      await api(`/api/admin/products/${id}`, { method: 'PUT', body: fd });
+      toast('Product updated ✓');
+    } else {
+      await api('/api/admin/products', { method: 'POST', body: fd });
+      toast('Product added ✓');
+    }
+    closeProdModal();
+    await loadProducts();
+  } catch (err) {
+    toast(err.message || 'Failed to save product', 'error');
+  } finally {
+    saveBtn.textContent = 'Save Product'; saveBtn.disabled = false;
+  }
+});
+
+// ── Delete Product ─────────────────────────────────────────────
+async function deleteProduct(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try {
+    await api(`/api/admin/products/${id}`, { method: 'DELETE' });
+    toast('Product deleted');
+    await loadProducts();
+  } catch (err) {
+    toast(err.message || 'Failed to delete', 'error');
+  }
+}
+
+// ── Delete single product image ────────────────────────────────
+async function deleteProductImage(imgId, wrapEl) {
+  try {
+    await api(`/api/admin/product-images/${imgId}`, { method: 'DELETE' });
+    wrapEl.remove();
+    toast('Image removed ✓');
+  } catch {
+    toast('Failed to remove image', 'error');
+  }
+}
+
+// ── Extend panelTitles ─────────────────────────────────────────
+panelTitles['products'] = 'Products';
+
+// ── Extend loadAll to include products ─────────────────────────
+const _baseLoadAll = loadAll;
+async function loadAll() {
+  await Promise.all([loadCategories(), loadEnquiries(), loadProducts()]);
+}

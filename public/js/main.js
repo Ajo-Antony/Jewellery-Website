@@ -88,12 +88,19 @@ async function loadCollections() {
     }
 
     categories.forEach((cat, i) => {
-      const card = document.createElement('div');
+      const card = document.createElement('a');
       card.className = 'collection-card';
       card.style.animationDelay = `${i * 0.1}s`;
+      // Use slug if available, fallback to id
+      const slug = cat.slug || String(cat.id);
+      card.href = `/collection/${slug}`;
+      card.style.textDecoration = 'none';
+      card.style.display = 'block';
+      card.style.cursor = 'pointer';
 
-      const imgHTML = cat.image
-        ? `<img class="cc-img" src="${cat.image}" alt="${cat.name}" loading="lazy" />`
+      const imgSrc = cat.image_url || cat.image;
+      const imgHTML = imgSrc
+        ? `<img class="cc-img" src="${imgSrc}" alt="${cat.name}" loading="lazy" />`
         : `<div class="cc-placeholder">
             <div class="cc-placeholder-icon">${PLACEHOLDER_ICONS[i % PLACEHOLDER_ICONS.length]}</div>
             <span>${PLACEHOLDER_LABELS[i % PLACEHOLDER_LABELS.length]}</span>
