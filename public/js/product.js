@@ -131,7 +131,7 @@ function switchThumb(url, el) {
   el.classList.add('active');
 }
 
-// Image zoom on hover
+// Image zoom on hover (pan-to-zoom effect)
 const mainWrap = document.getElementById('mainImgWrap');
 if (mainWrap) {
   mainWrap.addEventListener('mousemove', (e) => {
@@ -141,12 +141,17 @@ if (mainWrap) {
     const img = document.getElementById('mainImg');
     if (img) {
       img.style.transformOrigin = `${x}% ${y}%`;
-      img.style.transform = 'scale(1.5)';
+      img.style.transform = 'scale(1.8)';
+      img.style.transition = 'transform .1s ease, transform-origin 0s';
     }
   });
   mainWrap.addEventListener('mouseleave', () => {
     const img = document.getElementById('mainImg');
-    if (img) img.style.transform = '';
+    if (img) {
+      img.style.transform = 'scale(1)';
+      img.style.transformOrigin = 'center center';
+      img.style.transition = 'transform .4s ease';
+    }
   });
 }
 
