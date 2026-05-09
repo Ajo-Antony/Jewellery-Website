@@ -4,10 +4,26 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Product – Thoppil Jewellery</title>
+  <meta name="description" content="Premium handcrafted jewellery from Thoppil Jewellery, Kottayam Kerala."/>
+  <meta name="robots" content="index, follow"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/product.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet"></noscript>
+  <style>
+    :root{--gold:#c9a96e;--bg:#0d0b08;--bg-2:#13100c;--bg-3:#1c1710;--text:#f0ead8;--text-muted:#9a9080;--border:rgba(201,169,110,0.18);--font-serif:'Cormorant Garamond',Georgia,serif;--font-sans:'Raleway',sans-serif;--ease-out-quint:cubic-bezier(0.22,1,0.36,1)}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-weight:300;overflow-x:hidden}
+    #navbar{position:fixed;top:0;left:0;right:0;z-index:1000;height:72px;background:rgba(13,11,8,.92);backdrop-filter:blur(12px)}
+    .nav-inner{max-width:1280px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 2rem}
+    .nav-logo{font-family:var(--font-serif);font-size:1.4rem;font-weight:600;letter-spacing:.2em;color:var(--text);text-decoration:none}
+    .logo-t{color:var(--gold)}
+    .prod-detail-skeleton{max-width:1280px;margin:100px auto 0;padding:3rem 2rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem}
+    .pds-main{aspect-ratio:1;background:var(--bg-3)}
+  </style>
+  <link rel="stylesheet" href="/css/style.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/css/product.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/product.css"></noscript>
 </head>
 <body>
 
@@ -103,16 +119,16 @@
     </div>
   </section>
 
-  <!-- Related Products -->
-  <section class="related-section" id="relatedSection" style="display:none">
-    <div class="section-header">
-      <span class="section-tag">You May Also Like</span>
-      <h2>Related <em>Pieces</em></h2>
-    </div>
-    <div class="related-grid" id="relatedGrid"></div>
-  </section>
-
 </div>
+
+<!-- Related Products — outside main product div, full width below -->
+<section class="related-section" id="relatedSection" style="display:none">
+  <div class="section-header">
+    <span class="section-tag">You May Also Like</span>
+    <h2>Related <em>Pieces</em></h2>
+  </div>
+  <div class="related-grid" id="relatedGrid"></div>
+</section>
 
 <!-- WhatsApp float -->
 <a href="https://wa.me/919999900000" class="whatsapp-float" target="_blank">

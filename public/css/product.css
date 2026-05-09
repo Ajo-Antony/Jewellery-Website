@@ -182,13 +182,47 @@
 
 /* ── Related Products ─────────────────────────────────────── */
 .related-section {
-  background: var(--bg-2); padding: 5rem 2rem;
+  background: var(--bg-2);
+  padding: 5rem 2rem 6rem;
   border-top: 1px solid var(--border);
+  clear: both;
+  width: 100%;
+}
+.related-section .section-header {
+  max-width: 1280px;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+.related-section .section-header h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 300;
+  margin-bottom: .5rem;
+}
+.related-section .section-header h2 em {
+  font-style: italic;
+  color: var(--gold);
+}
+.related-section .section-tag {
+  display: inline-block;
+  font-size: .65rem; letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(201,169,110,.3);
+  padding-bottom: .4rem;
 }
 .related-grid {
-  max-width: 1280px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.5px;
+}
+
+/* ── Related card hover overlay fix ──────────────────────── */
+.related-grid .prod-card .prod-card-overlay {
+  background: linear-gradient(to top, rgba(0,0,0,.9), rgba(0,0,0,.1));
 }
 
 /* WhatsApp float from collection.css also applies here */

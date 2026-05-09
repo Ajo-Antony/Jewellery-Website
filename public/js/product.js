@@ -34,6 +34,9 @@ async function loadProduct() {
     document.getElementById('productSkeleton').style.display = 'none';
     document.getElementById('productDetail').style.display = 'block';
 
+    // Save to recently viewed
+    saveRecentlyViewed(product.slug || product.id, product.name);
+
   } catch (err) {
     showError();
   }
