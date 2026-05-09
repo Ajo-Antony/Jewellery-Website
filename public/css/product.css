@@ -218,45 +218,111 @@
   padding: 5rem 2rem 6rem;
   border-top: 1px solid var(--border);
   width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
-.related-section .section-header {
+.related-section .related-inner {
   max-width: 1280px;
-  margin: 0 auto 3rem;
+  margin: 0 auto;
+}
+.related-section .related-header {
   text-align: center;
+  margin-bottom: 3rem;
 }
-.related-section .section-header h2 {
-  font-family: var(--font-serif);
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
-  font-weight: 300; margin-bottom: .5rem;
-}
-.related-section .section-header h2 em {
-  font-style: italic; color: var(--gold);
-}
-.related-section .section-tag {
+.related-section .related-tag {
   display: inline-block;
   font-size: .65rem; letter-spacing: .3em;
   text-transform: uppercase; color: var(--gold);
-  margin-bottom: 1rem;
+  margin-bottom: .8rem;
   border-bottom: 1px solid rgba(201,169,110,.3);
   padding-bottom: .4rem;
 }
-.related-grid {
-  max-width: 1280px; margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5px;
+.related-section .related-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 300; color: var(--text);
 }
+.related-section .related-title em {
+  font-style: italic; color: var(--gold);
+}
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5px;
+  width: 100%;
+}
+/* Related card specific styles */
+.related-card {
+  background: var(--bg-3);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  display: block;
+  text-decoration: none;
+}
+.related-card-img-wrap {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--bg-3);
+}
+.related-card-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .6s var(--ease-out-quint);
+  display: block;
+}
+.related-card:hover .related-card-img { transform: scale(1.06); }
+.related-card-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.5rem; color: rgba(201,169,110,.15);
+}
+.related-card-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: .6rem;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  transform: translateY(100%);
+  transition: transform .3s var(--ease-out-quint);
+}
+.related-card:hover .related-card-overlay { transform: translateY(0); }
+.related-card-btn {
+  flex: 1; padding: .5rem; text-align: center;
+  background: var(--gold); color: #0d0b08;
+  font-size: .65rem; letter-spacing: .08em;
+  text-transform: uppercase; font-family: var(--font-sans);
+}
+.related-card-info {
+  padding: .9rem 1rem;
+  border-top: 1px solid var(--border);
+}
+.related-card-name {
+  font-family: var(--font-serif);
+  font-size: 1rem; font-weight: 400;
+  color: var(--text); margin-bottom: .3rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.related-card-meta {
+  display: flex; justify-content: space-between;
+  font-size: .7rem;
+}
+.related-card-purity { color: var(--gold); letter-spacing: .06em; }
+.related-card-price  { color: var(--text-muted); }
 
 /* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .related-grid { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 900px) {
-  .prod-main-inner        { grid-template-columns: 1fr; gap: 2.5rem; }
-  .prod-detail-skeleton   { grid-template-columns: 1fr; }
-  .prod-gallery           { position: static; }
-  .prod-specs             { grid-template-columns: repeat(2, 1fr); }
-  .related-grid           { grid-template-columns: repeat(2, 1fr); }
+  .prod-main-inner      { grid-template-columns: 1fr; gap: 2.5rem; }
+  .prod-detail-skeleton { grid-template-columns: 1fr; }
+  .prod-gallery         { position: static; }
+  .prod-specs           { grid-template-columns: repeat(2, 1fr); }
+  .related-grid         { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 480px) {
   .prod-specs  { grid-template-columns: 1fr; }
-  .related-grid{ grid-template-columns: 1fr; }
+  .related-grid{ grid-template-columns: repeat(2, 1fr); }
   .prod-main   { padding: 2rem 1rem 3rem; }
 }

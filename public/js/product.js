@@ -158,33 +158,31 @@ if (mainWrap) {
 // ── Related Products ───────────────────────────────────────────
 function renderRelated(products) {
   const section = document.getElementById('relatedSection');
-  const grid = document.getElementById('relatedGrid');
+  const grid    = document.getElementById('relatedGrid');
   section.style.display = 'block';
 
   grid.innerHTML = products.map((p, i) => {
-    const imgUrl = p.thumbnail;
+    const imgUrl   = p.thumbnail;
+    const prodSlug = p.slug || p.id;
     return `
-      <div class="prod-card" style="animation-delay:${i * 0.1}s">
-        <div class="prod-card-img-wrap">
+      <a class="related-card" href="/product/${prodSlug}" style="animation-delay:${i * 0.1}s">
+        <div class="related-card-img-wrap">
           ${imgUrl
-            ? `<img class="prod-card-img" src="${imgUrl}" alt="${escHTML(p.name)}" loading="lazy"/>`
-            : `<div class="prod-card-placeholder">
-                <div class="prod-card-placeholder-icon">${PLACEHOLDER_ICONS[i % PLACEHOLDER_ICONS.length]}</div>
-                <span>Jewellery</span>
-               </div>`
+            ? `<img class="related-card-img" src="${imgUrl}" alt="${escHTML(p.name)}" loading="lazy"/>`
+            : `<div class="related-card-placeholder">${PLACEHOLDER_ICONS[i % PLACEHOLDER_ICONS.length]}</div>`
           }
-          <div class="prod-card-overlay">
-            <a class="prod-card-view" href="/product/${p.slug || p.id}" style="flex:1">View Details</a>
+          <div class="related-card-overlay">
+            <span class="related-card-btn">View Details →</span>
           </div>
         </div>
-        <div class="prod-card-info">
-          <div class="prod-card-name">${escHTML(p.name)}</div>
-          <div class="prod-card-meta">
-            <span class="prod-card-purity">${escHTML(p.gold_purity || '22K')}</span>
-            <span class="prod-card-price">${escHTML(p.price_range || '')}</span>
+        <div class="related-card-info">
+          <div class="related-card-name">${escHTML(p.name)}</div>
+          <div class="related-card-meta">
+            <span class="related-card-purity">${escHTML(p.gold_purity || '22K')}</span>
+            <span class="related-card-price">${escHTML(p.price_range || '')}</span>
           </div>
         </div>
-      </div>
+      </a>
     `;
   }).join('');
 }
