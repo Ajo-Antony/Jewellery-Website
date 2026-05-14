@@ -2,15 +2,11 @@
    THOPPIL JEWELLERY — Main JavaScript
    ════════════════════════════════════════════════════════════ */
 
-// ── Loader ────────────────────────────────────────────────────
+// ── Hero animations on load ───────────────────────────────────
 window.addEventListener('load', () => {
-  setTimeout(() => {
-    document.getElementById('loader').classList.add('hidden');
-    // Trigger hero reveals after loader hides
-    document.querySelectorAll('#hero .reveal, #hero .reveal-right').forEach((el, i) => {
-      setTimeout(() => el.classList.add('visible'), i * 180);
-    });
-  }, 1400);
+  document.querySelectorAll('#hero .reveal, #hero .reveal-right').forEach((el, i) => {
+    setTimeout(() => el.classList.add('visible'), 200 + i * 180);
+  });
 });
 
 // ── Navbar scroll ─────────────────────────────────────────────
@@ -100,7 +96,7 @@ async function loadCollections() {
 
       const imgSrc = cat.image_url || cat.image;
       const imgHTML = imgSrc
-        ? `<img class="cc-img" src="${imgSrc}" alt="${cat.name}" loading="lazy" />`
+        ? `<img class="cc-img" src="${imgSrc}" alt="${cat.name}" loading="${i < 2 ? 'eager' : 'lazy'}" ${i === 0 ? 'fetchpriority="high"' : ''} />`
         : `<div class="cc-placeholder">
             <div class="cc-placeholder-icon">${PLACEHOLDER_ICONS[i % PLACEHOLDER_ICONS.length]}</div>
             <span>${PLACEHOLDER_LABELS[i % PLACEHOLDER_LABELS.length]}</span>
