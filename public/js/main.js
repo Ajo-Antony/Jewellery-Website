@@ -2,11 +2,17 @@
    THOPPIL JEWELLERY — Main JavaScript
    ════════════════════════════════════════════════════════════ */
 
-// ── Hero animations on load ───────────────────────────────────
+// ── Loader (shows once, then reveals hero) ───────────────────
 window.addEventListener('load', () => {
-  document.querySelectorAll('#hero .reveal, #hero .reveal-right').forEach((el, i) => {
-    setTimeout(() => el.classList.add('visible'), 200 + i * 180);
-  });
+  const loader = document.getElementById('loader');
+  if (!loader) return;
+  // Hide loader after 1.2s then animate hero in
+  setTimeout(() => {
+    loader.classList.add('hidden');
+    document.querySelectorAll('#hero .reveal, #hero .reveal-right').forEach((el, i) => {
+      setTimeout(() => el.classList.add('visible'), 200 + i * 180);
+    });
+  }, 1200);
 });
 
 // ── Navbar scroll ─────────────────────────────────────────────

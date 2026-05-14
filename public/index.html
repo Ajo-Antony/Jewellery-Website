@@ -33,6 +33,13 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html{scroll-behavior:smooth;font-size:16px}
     body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-weight:300;overflow-x:hidden}
+    #loader{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .8s ease,visibility .8s ease}
+    #loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
+    .loader-inner{text-align:center}
+    .loader-gem{width:72px;height:72px;animation:gemSpin 2.5s linear infinite;will-change:transform}
+    @keyframes gemSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .loader-text{font-family:var(--font-sans);font-size:.65rem;font-weight:400;letter-spacing:.35em;color:var(--gold);margin-top:1.2rem;animation:loaderPulse 1.5s ease infinite}
+    @keyframes loaderPulse{0%,100%{opacity:.4}50%{opacity:1}}
     #navbar{position:fixed;top:0;left:0;right:0;z-index:1000;height:72px;transition:background .4s,box-shadow .4s}
     #navbar.scrolled{background:rgba(13,11,8,.92);backdrop-filter:blur(12px);box-shadow:0 1px 0 var(--border)}
     .nav-inner{max-width:1280px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 2rem}
@@ -45,6 +52,23 @@
   <noscript><link rel="stylesheet" href="/css/style.css"></noscript>
 </head>
 <body>
+
+<!-- ── LOADER ── -->
+<div id="loader">
+  <div class="loader-inner">
+    <svg viewBox="0 0 80 80" class="loader-gem">
+      <polygon points="40,5 75,25 75,55 40,75 5,55 5,25" fill="none" stroke="#c9a96e" stroke-width="1.5"/>
+      <polygon points="40,18 62,30 62,50 40,62 18,50 18,30" fill="none" stroke="#c9a96e" stroke-width="1"/>
+      <line x1="40" y1="5"  x2="40" y2="18"  stroke="#c9a96e" stroke-width="0.8"/>
+      <line x1="75" y1="25" x2="62" y2="30"  stroke="#c9a96e" stroke-width="0.8"/>
+      <line x1="75" y1="55" x2="62" y2="50"  stroke="#c9a96e" stroke-width="0.8"/>
+      <line x1="40" y1="75" x2="40" y2="62"  stroke="#c9a96e" stroke-width="0.8"/>
+      <line x1="5"  y1="55" x2="18" y2="50"  stroke="#c9a96e" stroke-width="0.8"/>
+      <line x1="5"  y1="25" x2="18" y2="30"  stroke="#c9a96e" stroke-width="0.8"/>
+    </svg>
+    <p class="loader-text">THOPPIL JEWELLERY</p>
+  </div>
+</div>
 
 <!-- ── NAV ── -->
 <nav id="navbar">
