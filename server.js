@@ -545,21 +545,31 @@ http.createServer(async(req,res)=>{
     // ════════════════════════════════════════════════
 
     // Admin panel — secret path protection
-    // Correct path: /<ADMIN_SECRET_PATH> or /api/admin/*
     const adminPublicPath = '/'+ADMIN_PATH;
     const adminAssetPath  = '/'+ADMIN_PATH+'/';
 
-    // Block the old /admin URL with 404 (hides admin existence)
-    if(pname==='/admin'||pname.startsWith('/admin/')&&!pname.startsWith('/api/admin')){
-      res.writeHead(404); return res.end('Not found');
-    }
-
-    // Serve admin panel only on secret path
+    // Serve admin panel on secret path
     if(pname===adminPublicPath||pname.startsWith(adminAssetPath)){
       const subPath = pname===adminPublicPath ? '/admin/index.html'
                     : '/admin/'+pname.slice(adminAssetPath.length);
       const fp = path.join(__dirname, subPath);
       return serveFile(res, fs.existsSync(fp)&&path.extname(fp) ? fp : path.join(__dirname,'admin','index.html'));
+    }
+
+    // Also serve admin static assets (admin.js, etc) since HTML references /admin/admin.js
+    // but block the admin HTML itself — only serve assets, not the page
+    if(pname.startsWith('/admin/')){
+      const fp = path.join(__dirname, pname);
+      // Only serve JS/CSS files, not index.html (page access blocked)
+      if(fs.existsSync(fp) && path.extname(fp) && path.extname(fp)!=='.html'){
+        return serveFile(res, fp);
+      }
+      res.writeHead(404); return res.end('Not found');
+    }
+
+    // Block /admin directly
+    if(pname==='/admin'){
+      res.writeHead(404); return res.end('Not found');
     }
 
     // Public collection page: /collection/:slug
@@ -615,8 +625,8 @@ http.createServer(async(req,res)=>{
 
 }).listen(PORT,()=>{
   console.log(`\n✨ Thoppil Jewellery — Full Catalogue`);
-  console.log(`🌐 http://localhost:${PORT}`);
-  console.log(`🔐 Admin: http://localhost:${PORT}/admin`);
+  console.log(`🌐 Website: http://localhost:${PORT}`);
+  console.log(`🔐 Admin:   http://localhost:${PORT}/${ADMIN_PATH}`);
   if(!sbUrl()) console.warn('⚠️  SUPABASE_URL not set!\n');
   else console.log(`✅ Supabase: ${sbUrl()}\n`);
 });
