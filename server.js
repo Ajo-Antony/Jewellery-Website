@@ -25,8 +25,59 @@ const crypto = require('crypto');
   console.log('📄 .env loaded');
 })();
 
-const PORT   = process.env.PORT || 3000;
-const BUCKET = 'jewellery-images';
+const PORT        = process.env.PORT || 3000;
+const BUCKET      = 'jewellery-images';
+const ADMIN_PATH  = process.env.ADMIN_SECRET_PATH || 'admin-zsnmi3pg';
+
+// ── Rate limiter (in-memory, no npm needed) ─────────────────────
+const loginAttempts = new Map();   // key: IP → { count, blockedUntil }
+const MAX_ATTEMPTS  = 5;
+const BLOCK_MS      = 15 * 60 * 1000;  // 15 minutes
+const WINDOW_MS     = 15 * 60 * 1000;
+
+function getClientIP(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || req.headers['x-real-ip']
+    || req.socket?.remoteAddress
+    || 'unknown';
+}
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry) return false;
+  if (entry.blockedUntil && now < entry.blockedUntil) return true;
+  if (entry.blockedUntil && now >= entry.blockedUntil) {
+    loginAttempts.delete(ip); return false;
+  }
+  return false;
+}
+
+function recordFailedAttempt(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip) || { count: 0, firstAttempt: now };
+  // Reset window if too old
+  if (now - entry.firstAttempt > WINDOW_MS) {
+    entry.count = 0; entry.firstAttempt = now; entry.blockedUntil = null;
+  }
+  entry.count++;
+  if (entry.count >= MAX_ATTEMPTS) {
+    entry.blockedUntil = now + BLOCK_MS;
+    console.warn(`🔒 IP ${ip} blocked for 15 min after ${entry.count} failed login attempts`);
+  }
+  loginAttempts.set(ip, entry);
+}
+
+function clearAttempts(ip) { loginAttempts.delete(ip); }
+
+// Clean up old entries every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts.entries()) {
+    if (!entry.blockedUntil && now - entry.firstAttempt > WINDOW_MS) loginAttempts.delete(ip);
+    if (entry.blockedUntil && now > entry.blockedUntil + WINDOW_MS) loginAttempts.delete(ip);
+  }
+}, 30 * 60 * 1000);
 
 const MIME = {
   '.html':'text/html','.css':'text/css','.js':'application/javascript',
@@ -240,6 +291,13 @@ http.createServer(async(req,res)=>{
     // ════════════════════════════════════════════════
 
     if(pname==='/api/admin/login'&&method==='POST'){
+      const ip=getClientIP(req);
+      // Rate limit check
+      if(isRateLimited(ip)){
+        const entry=loginAttempts.get(ip);
+        const remaining=Math.ceil((entry.blockedUntil-Date.now())/60000);
+        return sendJSON(res,429,{error:`Too many failed attempts. Try again in ${remaining} minute(s).`});
+      }
       const{username,password}=JSON.parse((await readBody(req)).toString());
       const adminUser=process.env.ADMIN_USERNAME||'admin';
       const adminPass=process.env.ADMIN_PASSWORD||'admin123';
@@ -247,7 +305,13 @@ http.createServer(async(req,res)=>{
       const valid=adminHash
         ?username===adminUser&&verifyPassword(password,adminHash)
         :username===adminUser&&password===adminPass;
-      if(!valid) return sendJSON(res,401,{error:'Invalid credentials'});
+      if(!valid){
+        recordFailedAttempt(ip);
+        const entry=loginAttempts.get(ip)||{count:1};
+        const left=MAX_ATTEMPTS-entry.count;
+        return sendJSON(res,401,{error:`Invalid credentials. ${left>0?left+' attempt(s) remaining':'Account locked for 15 minutes.'}`});
+      }
+      clearAttempts(ip);
       return sendJSON(res,200,{success:true,token:signJWT({username,role:'admin'})});
     }
     if(pname==='/api/admin/verify'&&method==='GET'){
@@ -480,11 +544,22 @@ http.createServer(async(req,res)=>{
     // STATIC FILES
     // ════════════════════════════════════════════════
 
-    // Admin panel — all /admin/* routes
-    if(pname==='/admin'||pname.startsWith('/admin/')){
-      const ap=pname==='/admin'?'/admin/index.html':pname;
-      const fp=path.join(__dirname,ap);
-      return serveFile(res,fs.existsSync(fp)&&path.extname(fp)?fp:path.join(__dirname,'admin','index.html'));
+    // Admin panel — secret path protection
+    // Correct path: /<ADMIN_SECRET_PATH> or /api/admin/*
+    const adminPublicPath = '/'+ADMIN_PATH;
+    const adminAssetPath  = '/'+ADMIN_PATH+'/';
+
+    // Block the old /admin URL with 404 (hides admin existence)
+    if(pname==='/admin'||pname.startsWith('/admin/')&&!pname.startsWith('/api/admin')){
+      res.writeHead(404); return res.end('Not found');
+    }
+
+    // Serve admin panel only on secret path
+    if(pname===adminPublicPath||pname.startsWith(adminAssetPath)){
+      const subPath = pname===adminPublicPath ? '/admin/index.html'
+                    : '/admin/'+pname.slice(adminAssetPath.length);
+      const fp = path.join(__dirname, subPath);
+      return serveFile(res, fs.existsSync(fp)&&path.extname(fp) ? fp : path.join(__dirname,'admin','index.html'));
     }
 
     // Public collection page: /collection/:slug
@@ -495,6 +570,31 @@ http.createServer(async(req,res)=>{
     // Public product page: /product/:slug
     if(pname.startsWith('/product/')){
       return serveFile(res,path.join(__dirname,'public','product.html'));
+    }
+
+    // robots.txt
+    if(pname==='/robots.txt'){
+      return serveFile(res,path.join(__dirname,'public','robots.txt'));
+    }
+
+    // sitemap.xml — dynamically generated
+    if(pname==='/sitemap.xml'){
+      try{
+        const cats=await sb('GET','/rest/v1/categories?select=slug,updated_at&order=created_at.asc').catch(()=>[]);
+        const prods=await sb('GET','/rest/v1/products?select=slug,updated_at&order=created_at.desc').catch(()=>[]);
+        const base='https://thoppil-jewellery.onrender.com';
+        const today=new Date().toISOString().split('T')[0];
+        const urls=[
+          `<url><loc>${base}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+          ...(cats||[]).filter(c=>c.slug).map(c=>`<url><loc>${base}/collection/${c.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`),
+          ...(prods||[]).filter(p=>p.slug).map(p=>`<url><loc>${base}/product/${p.slug}</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>`)
+        ];
+        const xml=`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`;
+        res.writeHead(200,{'Content-Type':'application/xml','Cache-Control':'public,max-age=3600'});
+        return res.end(xml);
+      }catch(e){
+        res.writeHead(500);return res.end('Sitemap error');
+      }
     }
 
     // Homepage

@@ -4,10 +4,28 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Collection – Thoppil Jewellery</title>
+  <meta name="description" content="Browse our jewellery collection at Thoppil Jewellery, Kottayam Kerala. Handcrafted gold and diamond pieces."/>
+  <meta name="robots" content="index, follow"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/collection.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Raleway:wght@300;400;500&display=swap" rel="stylesheet"></noscript>
+  <style>
+    :root{--gold:#c9a96e;--bg:#0d0b08;--bg-2:#13100c;--bg-3:#1c1710;--text:#f0ead8;--text-muted:#9a9080;--border:rgba(201,169,110,0.18);--font-serif:'Cormorant Garamond',Georgia,serif;--font-sans:'Raleway',sans-serif;--ease-out-quint:cubic-bezier(0.22,1,0.36,1)}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-weight:300;overflow-x:hidden}
+    #navbar{position:fixed;top:0;left:0;right:0;z-index:1000;height:72px;background:rgba(13,11,8,.92);backdrop-filter:blur(12px)}
+    .nav-inner{max-width:1280px;margin:0 auto;height:100%;display:flex;align-items:center;justify-content:space-between;padding:0 2rem}
+    .nav-logo{font-family:var(--font-serif);font-size:1.4rem;font-weight:600;letter-spacing:.2em;color:var(--text);text-decoration:none}
+    .logo-t{color:var(--gold)}
+    .col-hero{position:relative;min-height:55vh;display:flex;align-items:flex-end;padding:0 2rem 4rem;overflow:hidden}
+    .col-hero-bg{position:absolute;inset:0}
+    .col-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.9) 0%,rgba(0,0,0,.3) 60%,rgba(0,0,0,.5) 100%)}
+    .col-hero-content{position:relative;z-index:1;max-width:1280px;margin:0 auto;width:100%}
+  </style>
+  <link rel="stylesheet" href="/css/style.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/css/collection.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/collection.css"></noscript>
 </head>
 <body>
 
@@ -20,7 +38,7 @@
       <li><a href="/#heritage">Heritage</a></li>
       <li><a href="/#contact">Contact</a></li>
     </ul>
-    <a href="/admin" class="nav-cta">Admin ↗</a>
+    
     <button class="nav-mobile-toggle" id="mobileToggle">☰</button>
   </div>
   <div class="nav-mobile-menu" id="mobileMenu">

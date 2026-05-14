@@ -86,17 +86,33 @@ function showDashboard(username) {
 // ── Login ──────────────────────────────────────────────────────
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const errEl = document.getElementById('loginError');
+  const errEl  = document.getElementById('loginError');
+  const btn    = e.target.querySelector('button[type=submit]');
   errEl.textContent = '';
+  errEl.style.color = 'var(--red)';
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+
   const username = document.getElementById('loginUser').value;
   const password = document.getElementById('loginPass').value;
   try {
     const data = await api('/api/admin/login', { method: 'POST', body: { username, password } });
     token = data.token;
     localStorage.setItem('tj_admin_token', token);
+    btn.textContent = '✓ Success';
     showDashboard(username);
   } catch (err) {
-    errEl.textContent = err.message || 'Invalid credentials';
+    const msg = err.message || 'Invalid credentials';
+    errEl.textContent = msg;
+    // If locked out, disable form temporarily
+    if (msg.includes('locked') || msg.includes('Too many')) {
+      errEl.style.color = 'var(--red)';
+      e.target.querySelectorAll('input').forEach(i => i.disabled = true);
+      setTimeout(() => {
+        e.target.querySelectorAll('input').forEach(i => i.disabled = false);
+        errEl.textContent = '';
+      }, 60000);
+    }
+    btn.textContent = 'Sign In'; btn.disabled = false;
   }
 });
 
